@@ -57,11 +57,24 @@ window.UI = (function () {
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  // 统一时间基准：与后端分片一致，固定按东八区（UTC+8）墙钟展示，
+  // 不随浏览器所在时区漂移。
+  const ZONE_OFFSET_MS = 8 * 3600 * 1000;
+  function zoneDate(ts) {
+    const ms = typeof ts === "number" && ts < 1e12 ? ts * 1000 : ts;
+    return new Date(ms + ZONE_OFFSET_MS);
+  }
   function fmtTime(ts) {
     if (!ts) return "-";
-    const d = new Date(typeof ts === "number" && ts < 1e12 ? ts * 1000 : ts);
+    const d = zoneDate(ts);
     const p = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+  }
+  function fmtHM(ts) {
+    if (!ts) return "";
+    const d = zoneDate(ts);
+    const p = (n) => String(n).padStart(2, "0");
+    return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
   }
   function modal(title, bodyHtml, footHtml) {
     let mask = document.getElementById("modal-mask");
@@ -109,7 +122,7 @@ window.UI = (function () {
   function jsonPretty(obj) {
     return JSON.stringify(obj, null, 2);
   }
-  return { toast, esc, fmtTime, modal, badge, actionBadge, levelBadge, statusBadge, jsonPretty };
+  return { toast, esc, fmtTime, fmtHM, zoneDate, modal, badge, actionBadge, levelBadge, statusBadge, jsonPretty };
 })();
 
 /* 会话 / 导航 */

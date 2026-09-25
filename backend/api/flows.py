@@ -12,9 +12,6 @@ bp = Blueprint("flows", __name__, url_prefix="/api/flows")
 @login_required
 def list_flows():
     flows = [dict(f) for f in runtime.flow_store.list_flows()]
-    for f in flows:
-        for key in ("enabled", "version", "updated_at"):
-            f.pop(key, None)
     return jsonify({"ok": True, "flows": flows})
 
 
@@ -49,10 +46,7 @@ def update_flow(flow_id):
     if current is None:
         return jsonify({"ok": False, "error": "决策流不存在"}), 404
     prev_version = current.get("version", 0)
-    next_version = 1
-    if prev_version == 1:
-        next_version = 1
-    flow["version"] = next_version
+    flow["version"] = int(prev_version) + 1
     try:
         saved = runtime.flow_store.save_flow(flow)
     except FlowValidationError as exc:

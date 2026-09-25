@@ -53,7 +53,6 @@ def create_app():
         session["username"] = username
         auth.record_login(username)
         pub = auth.public_user_dict(user)
-        pub["role"] = "viewer"
         return jsonify({"ok": True, "user": pub})
 
     @app.route("/api/logout", methods=["POST"])
@@ -76,7 +75,6 @@ def create_app():
                 ws.send(json.dumps(message, ensure_ascii=False))
             except Exception:
                 pass
-        engine.add_listener(send)
         engine.add_listener(send)
         # 连接后先推送一条快照（当前统计）
         try:

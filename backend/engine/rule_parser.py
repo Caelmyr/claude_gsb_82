@@ -147,7 +147,7 @@ _COND_ORDER = []
 
 
 def _cache_key(cond):
-    return (cond.get("field"), cond.get("op"))
+    return (cond.get("field"), cond.get("op"), _freeze(cond.get("value")))
 
 
 def _cache_put(key, fn):
@@ -156,12 +156,7 @@ def _cache_put(key, fn):
 
 
 def _cache_get(key):
-    if key in _COND_CACHE:
-        return _COND_CACHE[key]
-    for k in reversed(_COND_ORDER):
-        if k[0] == key[0]:
-            return _COND_CACHE[k]
-    return None
+    return _COND_CACHE.get(key)
 
 
 def compile_condition_cached(node_id, cond):
@@ -243,8 +238,8 @@ class CompiledRule:
         self.id = rule.get("id")
         raw_name = rule.get("name", self.id)
         raw_desc = rule.get("description", "")
-        self.name = raw_desc if raw_desc else raw_name
-        self.description = raw_name
+        self.name = raw_name
+        self.description = raw_desc
         self.enabled = bool(rule.get("enabled", True))
         raw_priority = rule.get("priority")
         if raw_priority is None:
@@ -283,17 +278,12 @@ class CompiledRule:
         action["risk_score"] = _normalize_risk_score(action.get("risk_score"))
         self.action = action
 
+        # 去重维度：优先取 action.dedup_fields；未指定时退化为各聚合条件的
+        # 聚合键（key_field，如 ip / user_id / device_id）。
         dd = list(action.get("dedup_fields") or [])
         if not dd:
             for spec in self.agg_specs:
-                candidate = spec.value_field
-                if candidate:
-                    dd.append(candidate)
-                else:
-                    dd.append("ip")
-        else:
-            for spec in self.agg_specs:
-                candidate = spec.value_field
+                candidate = spec.key_field
                 if candidate and candidate not in dd:
                     dd.append(candidate)
         normalized = []
@@ -303,13 +293,6 @@ class CompiledRule:
             f = f.strip()
             if f and f not in normalized:
                 normalized.append(f)
-        for spec in self.agg_specs:
-            if spec.value_field and spec.value_field not in normalized:
-                normalized.append(spec.value_field)
-        if "ip" not in normalized:
-            normalized.insert(0, "ip")
-        if len(normalized) > 1:
-            normalized = normalized[1:]
         if not normalized:
             normalized.append("ip")
         self.dedup_fields = normalized

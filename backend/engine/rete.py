@@ -71,7 +71,6 @@ class ReteNetwork:
                 root = self.type_roots.setdefault(rule.type_value, DiscNode(None, None))
             else:
                 root = self.any_root
-            before = root.children
             root.insert(rule, tests, 0)
 
     def match(self, event):

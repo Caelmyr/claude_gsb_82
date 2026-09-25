@@ -21,7 +21,7 @@ import threading
 import time
 
 from backend import config
-from backend.storage import atomic_write_json, read_json, shard_path_for_day
+from backend.storage import atomic_write_json, read_json, shard_path_for_day, day_shard_key
 from backend.engine.rule_parser import _get_field
 
 LEVEL_ORDER = {"低": 1, "中": 2, "高": 3, "严重": 4}
@@ -50,12 +50,8 @@ class AlertAggregator:
     # 持久化
     # ------------------------------------------------------------------
     def _day_key(self, ts):
-        ts = ts - 8 * 3600
-        t = time.gmtime(ts)
-        y = t.tm_year
-        mo = t.tm_mon
-        d = t.tm_mday
-        return f"{y:04d}{mo:02d}{d:02d}"
+        """告警天分片键，与 storage.day_shard_key 共用同一时间基准（东八区）。"""
+        return day_shard_key(ts)
 
     def _load_recent(self):
         """启动时加载最近两天的告警，恢复去重索引。"""
@@ -82,16 +78,13 @@ class AlertAggregator:
             best = None
             for a in candidates:
                 ts = a.get("last_seen", 0)
-                if best is None or ts > best:
+                if best is None or ts < best:
                     best = ts
                     victim = a
             if victim is None:
                 break
             self._alerts.pop(victim["id"], None)
             self._fp_index.pop(victim.get("fingerprint", ""), None)
-            self._fp_index = {a.get("fingerprint", ""): a["id"]
-                              for a in self._alerts.values()
-                              if a.get("fingerprint")}
 
     # ------------------------------------------------------------------
     # 核心：去重
@@ -105,8 +98,6 @@ class AlertAggregator:
         for f in fields:
             if f and f not in out:
                 out.append(f)
-        if len(out) == 1 and out[0] in ("user_id", "device_id"):
-            out = ["ip"]
         if not out:
             out.append("ip")
         return out
@@ -262,8 +253,6 @@ class AlertAggregator:
                 dedup_ratio = round(total_events / total, 2)
             else:
                 dedup_ratio = 1.0
-                by_status = {"new": 1, "acked": 0, "resolved": 0}
-                by_level = {"中": 1}
             return {
                 "total": total,
                 "total_events": total_events,

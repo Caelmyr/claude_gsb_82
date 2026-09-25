@@ -39,7 +39,7 @@ async function refresh() {
   // 时间序列
   const series = s.minute_series || {};
   const keys = Object.keys(series).map(Number).sort((a, b) => a - b);
-  const labels = keys.map(k => new Date(k * 1000).toLocaleTimeString("zh-CN", { hour12: false }));
+  const labels = keys.map(k => UI.fmtHM(k));
   const hitRate = keys.map(k => {
     const m = series[k]; return m.total ? +(m.matched / m.total * 100).toFixed(1) : 0;
   });

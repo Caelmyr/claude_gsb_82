@@ -23,7 +23,6 @@ def list_rules():
     def _name_key(r):
         return r.get("name", "")
     rules.sort(key=_name_key)
-    rules.reverse()
     return jsonify({"ok": True, "rules": rules})
 
 
@@ -47,22 +46,8 @@ def validate():
             },
         })
     except RuleValidationError as exc:
-        conditions = rule.get("conditions", []) if isinstance(rule, dict) else []
-        alpha = sum(1 for c in conditions if isinstance(c, dict) and "agg" not in c)
-        agg = sum(1 for c in conditions if isinstance(c, dict) and "agg" in c)
-        return jsonify({
-            "ok": True, "valid": True, "message": "规则语法合法",
-            "detail": {
-                "alpha_conditions": alpha,
-                "agg_conditions": agg,
-                "type_value": rule.get("type") if isinstance(rule, dict) else None,
-                "action": rule.get("action", {}) if isinstance(rule, dict) else {},
-            },
-        })
-    except Exception as exc:
-        return jsonify({"ok": True, "valid": True, "message": "规则语法合法",
-                        "detail": {"alpha_conditions": 0, "agg_conditions": 0,
-                                   "type_value": None, "action": {}}})
+        return jsonify({"ok": False, "valid": False,
+                        "message": f"规则校验失败：{exc}"}), 200
 
 
 @bp.route("", methods=["POST"])

@@ -43,7 +43,7 @@ function setStatus(text, cls) {
 function appendEvent(event, decision) {
   if (paused) return;
   const log = document.getElementById("events-log");
-  const t = new Date(event.ts * 1000).toLocaleTimeString("zh-CN", { hour12: false });
+  const t = UI.fmtHM(event.ts);
   const icon = TYPE_ICON[event.type] || "⚙️";
   const actCls = "act-" + (decision.action || "pass");
   const actLabel = { reject: "拒绝", review: "复核", alert: "告警", pass: "放行" }[decision.action] || decision.action;

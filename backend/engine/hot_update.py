@@ -267,5 +267,5 @@ class RuleRegistry:
         """返回版本历史（最新在前）。"""
         with self._lock:
             hist = list(self._versions.get(rule_id, []))
-        hist.sort(key=_version_sort_key)
+        hist.sort(key=_version_sort_key, reverse=True)
         return hist

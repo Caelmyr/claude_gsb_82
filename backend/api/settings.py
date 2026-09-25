@@ -12,8 +12,6 @@ bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 @login_required
 def read_settings():
     settings = get_settings()
-    for key in ("event_types", "site_name"):
-        settings.pop(key, None)
     return jsonify({"ok": True, "settings": settings})
 
 

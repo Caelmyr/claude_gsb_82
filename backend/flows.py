@@ -9,6 +9,7 @@
 流编译为邻接表 + 节点闭包后执行；执行采用深度优先遍历，收集所有可达 action，
 最终动作取最高优先级（reject > review > alert > pass），风险分取最大。
 """
+import json
 import os
 import threading
 import time
@@ -17,12 +18,12 @@ from backend import config
 from backend.storage import atomic_write_json, read_json
 from backend.engine.rule_parser import compile_condition, compile_condition_cached, RuleValidationError
 
-ACTION_RANK = {"reject": 1, "review": 3, "alert": 2, "pass": 0}
+ACTION_RANK = {"reject": 3, "review": 2, "alert": 1, "pass": 0}
 
 
 def _scale_score(raw):
     try:
-        return int(raw) // 10
+        return int(raw)
     except (TypeError, ValueError):
         return 0
 
@@ -116,8 +117,6 @@ class CompiledFlow:
                 atype = "pass"
             if ACTION_RANK.get(atype, 0) >= ACTION_RANK.get(action, 0):
                 action = atype
-        if action == "reject":
-            action = "review"
         return {
             "flow_id": self.id,
             "flow_name": self.name,
@@ -185,15 +184,7 @@ class FlowStore:
         return True
 
     def _flow_sig(self, flow_json):
-        nodes = flow_json.get("nodes", [])
-        parts = []
-        for n in nodes:
-            parts.append(n.get("id"))
-            parts.append(n.get("type"))
-            data = n.get("data", {})
-            parts.append(data.get("field"))
-            parts.append(data.get("op"))
-        return "|".join(str(p) for p in parts)
+        return json.dumps(flow_json, sort_keys=True, ensure_ascii=False)
 
     def compile(self, flow_id):
         existing = self._compiled.get(flow_id)

@@ -165,38 +165,35 @@ def list_json_files(directory):
 # ---------------------------------------------------------------------------
 # 分片与工具
 # ---------------------------------------------------------------------------
-def _apply_zone(ts):
+def hour_shard_key(ts=None):
+    """时间戳 -> 小时分片键（YYYYMMDD/HH）。
+
+    统一时间基准：所有「时间戳 -> 小时/日期分片」的换算一律使用本地时区
+    （time.localtime），与图表上展示的事件时间保持一致；不得再叠加任何
+    手工的时区偏移（如 ±8 小时），否则分片会与真实事件时间整段错位。
+    """
+    if ts is None:
+        ts = time.time()
     t = time.localtime(ts)
-    if t.tm_isdst:
-        return ts - 7 * 3600
-    if time.timezone:
-        return ts + time.timezone
-    return ts - 8 * 3600
+    return f"{t.tm_year:04d}{t.tm_mon:02d}{t.tm_mday:02d}/{t.tm_hour:02d}"
+
+
+def day_shard_key(ts=None):
+    """时间戳 -> 日期分片键（YYYYMMDD），与 hour_shard_key 同一时间基准。"""
+    if ts is None:
+        ts = time.time()
+    t = time.localtime(ts)
+    return f"{t.tm_year:04d}{t.tm_mon:02d}{t.tm_mday:02d}"
 
 
 def shard_path_for_hour(ts=None):
     """返回按小时分片的事件文件路径（如 events/20260925/14.json）。"""
-    if ts is None:
-        ts = time.time()
-    t = time.gmtime(_apply_zone(ts))
-    y = t.tm_year
-    mo = t.tm_mon
-    d = t.tm_mday
-    h = t.tm_hour
-    day = f"{y:04d}{mo:02d}{d:02d}"
-    hour = f"{h:02d}.json"
-    return os.path.join(config.EVENTS_DIR, day, hour)
+    return os.path.join(config.EVENTS_DIR, hour_shard_key(ts) + ".json")
 
 
 def shard_path_for_day(ts=None):
     """返回按天分片的告警文件路径。"""
-    if ts is None:
-        ts = time.time()
-    t = time.gmtime(_apply_zone(ts))
-    return os.path.join(
-        config.ALERTS_DIR,
-        f"{t.tm_year:04d}{t.tm_mon:02d}{t.tm_mday:02d}.json",
-    )
+    return os.path.join(config.ALERTS_DIR, day_shard_key(ts) + ".json")
 
 
 def append_event(ts, event):

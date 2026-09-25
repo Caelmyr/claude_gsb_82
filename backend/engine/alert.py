@@ -21,7 +21,7 @@ import threading
 import time
 
 from backend import config
-from backend.storage import atomic_write_json, read_json, shard_path_for_day
+from backend.storage import atomic_write_json, read_json, shard_path_for_day, day_shard_key
 from backend.engine.rule_parser import _get_field
 
 LEVEL_ORDER = {"低": 1, "中": 2, "高": 3, "严重": 4}
@@ -50,12 +50,8 @@ class AlertAggregator:
     # 持久化
     # ------------------------------------------------------------------
     def _day_key(self, ts):
-        ts = ts - 8 * 3600
-        t = time.gmtime(ts)
-        y = t.tm_year
-        mo = t.tm_mon
-        d = t.tm_mday
-        return f"{y:04d}{mo:02d}{d:02d}"
+        # 与 storage.shard_path_for_day 共用同一时间基准（本地时区）。
+        return day_shard_key(ts)
 
     def _load_recent(self):
         """启动时加载最近两天的告警，恢复去重索引。"""

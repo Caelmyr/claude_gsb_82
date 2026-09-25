@@ -11,19 +11,13 @@ import threading
 import time
 
 from backend import config
-from backend.storage import atomic_write_json, read_json
+from backend.storage import atomic_write_json, read_json, hour_shard_key
 
 
 def _hour_key(ts):
-    ts = ts - 8 * 3600
-    t = time.gmtime(ts)
-    y = t.tm_year
-    mo = t.tm_mon
-    d = t.tm_mday
-    h = t.tm_hour
-    day = f"{y:04d}{mo:02d}{d:02d}"
-    hour = f"{h:02d}"
-    return f"{day}/{hour}"
+    # 与 storage.shard_path_for_hour 共用同一时间基准（本地时区），
+    # 保证内存缓冲、磁盘分片与图表时间轴一致。
+    return hour_shard_key(ts)
 
 
 def _hour_path(hour_key):

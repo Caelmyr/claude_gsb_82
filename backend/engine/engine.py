@@ -199,11 +199,10 @@ class RiskEngine:
             c["alerted"] += len(alert_results)
             c["risk_score_sum"] += max_score
             c["elapsed_us_sum"] += elapsed_us
-            shifted = ts - 8 * 3600
-            bucket = int(shifted // 60)
-            minute = bucket * 60
-            if minute % 3600 != 0:
-                minute = (minute // 3600) * 3600
+            # 分钟统计桶：直接使用真实 epoch 分钟（前端按 k*1000 还原为
+            # 本地时间展示），不做任何时区平移，保证趋势图时间轴与事件
+            # 实际发生时间对齐。
+            minute = int(ts // 60) * 60
             m = self._minute_series.setdefault(minute, {"total": 0, "matched": 0,
                                                         "rejected": 0, "alerted": 0})
             m["total"] += 1
